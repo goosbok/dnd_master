@@ -1,0 +1,20 @@
+[
+  { "id": "athletics", "name": "Атлетика", "ability": "str" },
+  { "id": "acrobatics", "name": "Акробатика", "ability": "dex" },
+  { "id": "sleight_of_hand", "name": "Ловкость рук", "ability": "dex" },
+  { "id": "stealth", "name": "Скрытность", "ability": "dex" },
+  { "id": "arcana", "name": "Магия", "ability": "int" },
+  { "id": "history", "name": "История", "ability": "int" },
+  { "id": "investigation", "name": "Расследование", "ability": "int" },
+  { "id": "nature", "name": "Природа", "ability": "int" },
+  { "id": "religion", "name": "Религия", "ability": "int" },
+  { "id": "animal_handling", "name": "Уход за животными", "ability": "wis" },
+  { "id": "insight", "name": "Проницательность", "ability": "wis" },
+  { "id": "medicine", "name": "Медицина", "ability": "wis" },
+  { "id": "perception", "name": "Восприятие", "ability": "wis" },
+  { "id": "survival", "name": "Выживание", "ability": "wis" },
+  { "id": "deception", "name": "Обман", "ability": "cha" },
+  { "id": "intimidation", "name": "Запугивание", "ability": "cha" },
+  { "id": "performance", "name": "Выступление", "ability": "cha" },
+  { "id": "persuasion", "name": "Убеждение", "ability": "cha" }
+]

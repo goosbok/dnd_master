@@ -1,0 +1,54 @@
+{
+  "fighter": {
+    "level": 1,
+    "abilities": { "str": 16, "dex": 13, "con": 15, "int": 10, "wis": 12, "cha": 8 },
+    "hp": 12,
+    "max_hp": 12,
+    "ac": 16,
+    "proficiency_bonus": 2,
+    "skills": ["athletics", "perception", "intimidation"],
+    "inventory": ["длинный меч", "кольчуга", "щит", "комплект исследователя"],
+    "attack_bonus": 5,
+    "damage_die": 8,
+    "damage_bonus": 3
+  },
+  "rogue": {
+    "level": 1,
+    "abilities": { "str": 10, "dex": 16, "con": 13, "int": 14, "wis": 12, "cha": 10 },
+    "hp": 9,
+    "max_hp": 9,
+    "ac": 14,
+    "proficiency_bonus": 2,
+    "skills": ["stealth", "investigation", "sleight_of_hand", "acrobatics"],
+    "inventory": ["короткий меч", "воровские инструменты", "кожаный доспех"],
+    "attack_bonus": 5,
+    "damage_die": 6,
+    "damage_bonus": 3
+  },
+  "wizard": {
+    "level": 1,
+    "abilities": { "str": 8, "dex": 13, "con": 13, "int": 16, "wis": 14, "cha": 10 },
+    "hp": 7,
+    "max_hp": 7,
+    "ac": 12,
+    "proficiency_bonus": 2,
+    "skills": ["arcana", "history", "investigation"],
+    "inventory": ["посох", "книга заклинаний", "сумка с компонентами"],
+    "attack_bonus": 5,
+    "damage_die": 10,
+    "damage_bonus": 0
+  },
+  "cleric": {
+    "level": 1,
+    "abilities": { "str": 14, "dex": 10, "con": 14, "int": 10, "wis": 16, "cha": 12 },
+    "hp": 10,
+    "max_hp": 10,
+    "ac": 16,
+    "proficiency_bonus": 2,
+    "skills": ["insight", "religion", "medicine", "persuasion"],
+    "inventory": ["булава", "чешуйчатый доспех", "святой символ", "щит"],
+    "attack_bonus": 4,
+    "damage_die": 6,
+    "damage_bonus": 2
+  }
+}

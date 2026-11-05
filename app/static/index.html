@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>D&D — AI Мастер</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: Georgia, serif; background: #14100c; color: #e8dcc8; }
+  h1 { font-size: 1.3rem; margin: 0; }
+  button { cursor: pointer; background: #6b4f2a; color: #f5ead2; border: 1px solid #8a6a3b;
+           border-radius: 4px; padding: 6px 14px; font-family: inherit; }
+  button:hover { background: #7d5c33; }
+  input, select { background: #1f1a14; color: #e8dcc8; border: 1px solid #5a4630;
+                  border-radius: 4px; padding: 6px 8px; font-family: inherit; }
+  #setup { max-width: 560px; margin: 8vh auto; background: #1f1a14; padding: 24px;
+           border: 1px solid #5a4630; border-radius: 8px; display: flex; flex-direction: column; gap: 12px; }
+  #game { display: none; grid-template-columns: 1fr 300px; gap: 12px; height: 100vh; height: 100dvh; padding: 12px; }
+  #chat { display: flex; flex-direction: column; border: 1px solid #5a4630; border-radius: 8px; overflow: hidden; }
+  #log { flex: 1; overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 10px; }
+  .msg { padding: 8px 10px; border-radius: 6px; white-space: pre-wrap; line-height: 1.45; }
+  .msg.player { background: #2c3340; align-self: flex-end; max-width: 85%; }
+  .msg.dm { background: #241f18; border: 1px solid #4a3b26; max-width: 95%; }
+  .msg.system { background: transparent; color: #9a8a6a; font-style: italic; }
+  .msg.ooc { background: #1a2330; border: 1px dashed #3a4a66; max-width: 90%; }
+  #q-btn.active { background: #2a4a66; border-color: #4a6a8a; }
+  .msg .who { font-size: 0.75rem; color: #b08d57; display: block; margin-bottom: 4px; }
+  .rolls { font-size: 0.8rem; color: #8fb573; margin-top: 6px; }
+  #composer { display: flex; gap: 8px; padding: 10px; border-top: 1px solid #5a4630; }
+  #composer input { flex: 1; }
+  #panel { border: 1px solid #5a4630; border-radius: 8px; padding: 12px; overflow-y: auto;
+           display: flex; flex-direction: column; gap: 14px; }
+  #panel h2 { font-size: 1rem; margin: 0 0 6px; color: #c9a86a; }
+  #panel ul { margin: 0; padding-left: 18px; }
+  #panel li { margin-bottom: 3px; font-size: 0.9rem; }
+  .hpbar { height: 10px; background: #3a2a1a; border-radius: 5px; overflow: hidden; }
+  .hpbar > div { height: 100%; background: #7a3b2e; }
+  .scenario { border: 1px solid #5a4630; border-radius: 6px; padding: 10px; }
+  .scenario.selected { border-color: #c9a86a; background: #292015; }
+  .scenario b { color: #c9a86a; }
+  .scenario p { margin: 6px 0 0; font-size: 0.85rem; color: #b8a888; }
+  #mic-btn.listening { background: #8a2f2a; border-color: #b0443e; animation: pulse 1.2s infinite; }
+  @keyframes pulse { 50% { opacity: 0.6; } }
+  #tts-btn.active { background: #2f5a2a; border-color: #4a7a3b; }
+  #panel-btn { display: none; }
+
+  @media (max-width: 768px) {
+    #setup { margin: 4vh 12px; }
+    input, select { font-size: 16px; } /* против авто-зума iOS */
+    #game { grid-template-columns: 1fr; padding: 8px; gap: 8px; }
+    #composer button { padding: 10px 14px; }
+    #panel {
+      display: none; position: fixed; left: 8px; right: 8px; bottom: 64px;
+      max-height: 55vh; background: #1f1a14; z-index: 10;
+      box-shadow: 0 -4px 24px rgba(0,0,0,0.6);
+    }
+    #panel.open { display: flex; }
+    #panel-btn {
+      display: block; position: fixed; top: 10px; right: 10px; z-index: 11;
+      padding: 8px 12px; font-size: 1.05rem;
+    }
+  }
+</style>
+</head>
+<body>
+
+<div id="setup">
+  <h1>Выбор ван-шота</h1>
+  <div id="scenario-list" style="display:flex;flex-direction:column;gap:8px"></div>
+  <label>Имя персонажа <input id="char-name" value="Герой"></label>
+  <label>Класс
+    <select id="char-class">
+      <option value="fighter">Воин</option>
+      <option value="rogue">Плут</option>
+      <option value="wizard">Волшебник</option>
+      <option value="cleric">Жрец</option>
+    </select>
+  </label>
+  <button id="start-btn">Начать игру</button>
+</div>
+
+<div id="game">
+  <div id="chat">
+    <div id="log"></div>
+    <div id="composer">
+      <button id="q-btn" title="Режим вопроса мастеру">❓</button>
+      <button id="tts-btn" title="Озвучка мастера">🔊</button>
+      <button id="mic-btn" title="Голосовой ввод">🎤</button>
+      <input id="action-input" placeholder="Что вы делаете?" autofocus>
+      <button id="send-btn">➤</button>
+    </div>
+  </div>
+  <div id="panel">
+    <section><h2>Персонаж</h2><div id="char-sheet"></div></section>
+    <section><h2>Сцена</h2><div id="scene-info"></div></section>
+    <section><h2>Факты</h2><ul id="facts"></ul></section>
+  </div>
+  <button id="panel-btn" title="Лист персонажа">📜</button>
+</div>
+
+<script>
+let sessionId = null;
+let selectedScenario = null;
+let npcNames = {};
+
+const $ = (id) => document.getElementById(id);
+
+async function api(path, options) {
+  const res = await fetch(path, options);
+  if (!res.ok) throw new Error(`${res.status}: ${await res.text()}`);
+  return res.json();
+}
+
+function addMsg(who, text, cls, rolls) {
+  const div = document.createElement("div");
+  div.className = "msg " + cls;
+  const label = document.createElement("span");
+  label.className = "who";
+  label.textContent = who;
+  div.appendChild(label);
+  div.appendChild(document.createTextNode(text));
+  if (rolls && rolls.length) {
+    const r = document.createElement("div");
+    r.className = "rolls";
+    r.textContent = rolls.map(describeRoll).join("\n");
+    r.style.whiteSpace = "pre-wrap";
+    div.appendChild(r);
+  }
+  $("log").appendChild(div);
+  $("log").scrollTop = $("log").scrollHeight;
+}
+
+function describeRoll(roll) {
+  if (roll.kind === "check") {
+    return `🎲 ${roll.skill}: d20(${roll.roll})+${roll.modifier}=${roll.total} vs СЛ ${roll.dc} — ` +
+      (roll.success ? "успех" : "провал") + (roll.critical ? " (крит!)" : "");
+  }
+  if (roll.kind === "attack" || roll.kind === "counterattack") {
+    const t = `${roll.kind === "counterattack" ? "Ответная атака" : "Атака"}: ${roll.total} vs КД ${roll.target_ac} — `;
+    return "🎲 " + t + (roll.hit ? `попадание, урон ${roll.damage}` : "промах") +
+      (roll.critical ? " (крит!)" : "") + (roll.target_dead ? " — цель повержена" : "");
+  }
+  return "";
+}
+
+function renderState(view) {
+  const c = view.session.character;
+  npcNames = {};
+  for (const n of view.scene.npcs || []) npcNames[n.id] = n.name;
+  for (const e of view.scene.enemies || []) npcNames[e.id] = e.name;
+  const abil = Object.entries(c.abilities)
+    .map(([k, v]) => `${k.toUpperCase()} ${v}`).join(" · ");
+  $("char-sheet").innerHTML =
+    `<b>${c.name}</b>, ${c.char_class} ${c.level} ур.<br>` +
+    `<div class="hpbar"><div style="width:${100 * c.hp / c.max_hp}%"></div></div>` +
+    `HP ${c.hp}/${c.max_hp} · КД ${c.ac}<br><small>${abil}</small>` +
+    (c.inventory.length ? `<br>Инвентарь: ${c.inventory.join(", ")}` : "");
+  $("scene-info").innerHTML =
+    `<b>${view.scene.title || view.scene.id}</b><br><small>${view.scene.goal || ""}</small>`;
+  $("facts").innerHTML = "";
+  for (const f of view.facts) {
+    if (f.startsWith("met_npc:") || f.startsWith("npc_disposition:")) continue;
+    const li = document.createElement("li");
+    li.textContent = f;
+    $("facts").appendChild(li);
+  }
+}
+
+async function loadScenarios() {
+  const list = await api("/scenarios");
+  const box = $("scenario-list");
+  for (const s of list) {
+    const div = document.createElement("div");
+    div.className = "scenario";
+    div.innerHTML = `<b>${s.title}</b><p>${s.premise}</p>`;
+    div.onclick = () => {
+      selectedScenario = s.id;
+      document.querySelectorAll(".scenario").forEach(el => el.classList.remove("selected"));
+      div.classList.add("selected");
+    };
+    box.appendChild(div);
+  }
+  if (list.length) { selectedScenario = list[0].id; box.firstChild.classList.add("selected"); }
+}
+
+$("start-btn").onclick = async () => {
+  if (!selectedScenario) return;
+  const view = await api("/sessions", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      scenario_id: selectedScenario,
+      character_name: $("char-name").value || "Герой",
+      character_class: $("char-class").value,
+    }),
+  });
+  sessionId = view.session.id;
+  $("setup").style.display = "none";
+  $("game").style.display = "grid";
+  renderState(view);
+  addMsg("Мастер", view.scene.on_enter, "dm");
+  speak(view.scene.on_enter);
+};
+
+async function sendAction() {
+  const input = $("action-input");
+  const text = input.value.trim();
+  if (!text || !sessionId) return;
+  input.value = "";
+  if (questionMode) {
+    addMsg("Вы → мастеру", text, "ooc");
+    try {
+      const res = await api(`/sessions/${sessionId}/questions`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text }),
+      });
+      addMsg("Мастер (вне игры)", res.answer, "ooc");
+    } catch (e) {
+      addMsg("Система", "Ошибка: " + e.message, "system");
+    }
+    return;
+  }
+  addMsg("Вы", text, "player");
+  try {
+    const result = await api(`/sessions/${sessionId}/actions`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text }),
+    });
+    const view = await api(`/sessions/${sessionId}`);
+    renderState(view);
+    addMsg("Мастер", result.narration, "dm", result.rolls);
+    speak(result.narration);
+    for (const line of result.npc_lines) {
+      addMsg(npcNames[line.npc_id] || line.npc_id, line.line, "system");
+      speak(line.line, 0.75);
+    }
+    if (result.scene_changed && result.scene_on_enter) {
+      addMsg("Мастер", result.scene_on_enter, "dm");
+      speak(result.scene_on_enter);
+    }
+  } catch (e) {
+    addMsg("Система", "Ошибка: " + e.message, "system");
+  }
+}
+
+$("send-btn").onclick = sendAction;
+$("action-input").addEventListener("keydown", (e) => { if (e.key === "Enter") sendAction(); });
+
+let questionMode = false;
+$("q-btn").onclick = () => {
+  questionMode = !questionMode;
+  $("q-btn").classList.toggle("active", questionMode);
+  $("action-input").placeholder = questionMode ? "Вопрос мастеру (вне роли)…" : "Что вы делаете?";
+};
+
+$("panel-btn").onclick = () => $("panel").classList.toggle("open");
+
+// Озвучка: Web Speech Synthesis, русский голос браузера
+let ttsOn = false;
+let ruVoice = null;
+
+function pickVoice() {
+  const voices = speechSynthesis.getVoices().filter(v =>
+    v.lang.replace("_", "-").toLowerCase().startsWith("ru"));
+  ruVoice = voices.find(v => v.localService) || voices[0] || null;
+}
+if ("speechSynthesis" in window) {
+  pickVoice();
+  speechSynthesis.onvoiceschanged = pickVoice;
+} else {
+  $("tts-btn").style.display = "none";
+}
+
+function speak(text, pitch = 1.0) {
+  if (!ttsOn || !("speechSynthesis" in window)) return;
+  pickVoice(); // Chrome сбрасывает удалённые голоса между фразами — перечитываем каждый раз
+  const u = new SpeechSynthesisUtterance(text);
+  u.lang = "ru-RU";
+  if (ruVoice) u.voice = ruVoice;
+  u.pitch = pitch;
+  u.rate = 1.05;
+  speechSynthesis.speak(u);
+}
+
+$("tts-btn").onclick = () => {
+  ttsOn = !ttsOn;
+  $("tts-btn").classList.toggle("active", ttsOn);
+  if (!ttsOn) speechSynthesis.cancel();
+};
+
+// Голосовой ввод: Web Speech API (требует localhost или HTTPS)
+(function setupVoice() {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  const btn = $("mic-btn");
+  if (!SR) { btn.style.display = "none"; return; }
+  const rec = new SR();
+  rec.lang = "ru-RU";
+  rec.interimResults = true;
+  rec.continuous = false;
+  let listening = false;
+  let baseText = "";
+
+  rec.onresult = (e) => {
+    let spoken = "";
+    for (const r of e.results) spoken += r[0].transcript;
+    const input = $("action-input");
+    input.value = (baseText ? baseText + " " : "") + spoken.trim();
+  };
+  const stop = () => { listening = false; btn.classList.remove("listening"); };
+  rec.onend = stop;
+  rec.onerror = (e) => {
+    stop();
+    if (e.error === "not-allowed") {
+      addMsg("Система", "Браузер не дал доступ к микрофону. Голос работает на localhost или по HTTPS.", "system");
+    }
+  };
+  btn.onclick = () => {
+    if (listening) { rec.stop(); return; }
+    baseText = $("action-input").value.trim();
+    listening = true;
+    btn.classList.add("listening");
+    rec.start();
+  };
+})();
+
+loadScenarios();
+</script>
+</body>
+</html>
